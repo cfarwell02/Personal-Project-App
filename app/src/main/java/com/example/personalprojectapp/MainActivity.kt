@@ -8,7 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,20 +39,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.personalprojectapp.ui.theme.PersonalProjectAppTheme
+import androidx.compose.ui.graphics.ColorFilter
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,23 +63,33 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
-            PracticeTheme {
+            var darkModeEnabled by rememberSaveable { mutableStateOf(false) }
+
+            PersonalProjectAppTheme(darkTheme = darkModeEnabled) {
                 val contacts = remember { mutableStateListOf<Contacts>() }
-                AppNavigation(people = contacts)
+
+                AppNavigation(
+                    darkModeEnabled = darkModeEnabled,
+                    onDarkModeToggle = { darkModeEnabled = it },
+                    people = contacts
+                )
             }
         }
     }
 }
 
 @Composable
-fun AppNavigation(people: List<Contacts>) {
+fun AppNavigation(
+    darkModeEnabled: Boolean,
+    onDarkModeToggle: (Boolean) -> Unit,
+    people: List<Contacts>
+) {
     // State variable to track the current screen
     val currentScreen = remember { mutableStateOf("home") }
     val userInputList = remember { mutableStateListOf<String>() }
     val contacts = remember { mutableStateListOf(*people.toTypedArray()) }
-    var darkModeEnabled by remember { mutableStateOf(false) }
 
-    PracticeTheme(darkTheme = darkModeEnabled) {
+    PersonalProjectAppTheme(darkTheme = darkModeEnabled) {
         Crossfade(targetState = currentScreen.value, label = "") { screen ->
             when (screen) {
 
@@ -85,33 +97,39 @@ fun AppNavigation(people: List<Contacts>) {
                     onNavigateToUserList = { currentScreen.value = "userList" },
                     onNavigateToOtherScreen = { currentScreen.value = "betweenscreens" },
                     onNavigateToSettings = { currentScreen.value = "settings" },
-                    onNavigateToMoneyScreen = { currentScreen.value = "money"}
+                    onNavigateToMoneyScreen = { currentScreen.value = "money"},
+                    darkModeEnabled = darkModeEnabled
                 )
 
                 "userList" -> UserListScreen(
                     onNavigate = { currentScreen.value = "home" },
-                    userInputList = userInputList
+                    userInputList = userInputList,
+                    darkModeEnabled = darkModeEnabled
+
                 )
 
                 "betweenscreens" -> ContactScreen(
                     onNavigateBack = { currentScreen.value = "home" },
                     contacts = contacts,
-                    onNavigateToAddContact = { currentScreen.value = "addContact" }
+                    onNavigateToAddContact = { currentScreen.value = "addContact" },
+                    darkModeEnabled = darkModeEnabled
                 )
 
                 "settings" -> SettingsScreen(
                     darkModeEnabled = darkModeEnabled,
-                    onDarkModeToggle = { darkModeEnabled = it },
-                    onNavigateBack = { currentScreen.value = "home" }
+                    onDarkModeToggle = onDarkModeToggle,
+                    onNavigateBack = { currentScreen.value = "home" },
                 )
 
                 "addContact" -> AddContactScreen(
                     onNavigateBack = { currentScreen.value = "betweenscreens" },
-                    onAddContact = { newContact -> contacts.add(newContact) }
+                    onAddContact = { newContact -> contacts.add(newContact) },
+                    darkModeEnabled = darkModeEnabled
                 )
 
                 "money" -> MoneyScreen(
                     onNavigateBack = { currentScreen.value = "home" },
+                    darkModeEnabled = darkModeEnabled
                 )
             }
         }
@@ -119,10 +137,12 @@ fun AppNavigation(people: List<Contacts>) {
 }
 
 @Composable
-fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> Unit, onNavigateToSettings: () -> Unit, onNavigateToMoneyScreen: () -> Unit) {
+fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> Unit, onNavigateToSettings: () -> Unit, onNavigateToMoneyScreen: () -> Unit, darkModeEnabled: Boolean) {
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (darkModeEnabled) Color.Black else Color.White)
             .padding(16.dp)
             .padding(WindowInsets.systemBars.asPaddingValues()),
         verticalArrangement = Arrangement.Top
@@ -130,6 +150,7 @@ fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> 
         Text(
             text = "Welcome to your App",
             style = MaterialTheme.typography.headlineMedium,
+            color = if (darkModeEnabled) Color.White else Color.Black,
             modifier = Modifier
                 .padding(top = 16.dp)
                 .align(Alignment.CenterHorizontally)
@@ -150,12 +171,14 @@ fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> 
                     Icon(
                         painter = painterResource(id = R.drawable.image_list),
                         contentDescription = "Go to User List",
+                        tint = if (darkModeEnabled) Color.White else Color.Black,
                         modifier = Modifier.size(48.dp)
                     )
                 }
                 Text(
                     "User List",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = if (darkModeEnabled) Color.White else Color.Black,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
@@ -167,6 +190,7 @@ fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> 
                 IconButton(onClick = onNavigateToMoneyScreen) {
                     Icon(
                         painter = painterResource(id = R.drawable.image_money),
+                        tint = if (darkModeEnabled) Color.White else Color.Black,
                         contentDescription = "Go to Money Screen",
                         modifier = Modifier.size(48.dp)
                     )
@@ -174,6 +198,7 @@ fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> 
                 Text(
                     "Money",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = if (darkModeEnabled) Color.White else Color.Black,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
@@ -186,11 +211,13 @@ fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> 
                     Icon(
                         painter = painterResource(id = R.drawable.image_contacts),
                         contentDescription = "Go to Contacts",
+                        tint = if (darkModeEnabled) Color.White else Color.Black,
                         modifier = Modifier.size(48.dp)
                     )
                 }
                 Text("Contacts",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = if (darkModeEnabled) Color.White else Color.Black,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
@@ -203,11 +230,13 @@ fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> 
                     Icon(
                         painter = painterResource(id = R.drawable.image_settings),
                         contentDescription = "Go to Contacts",
+                        tint = if (darkModeEnabled) Color.White else Color.Black,
                         modifier = Modifier.size(48.dp)
                     )
                 }
                 Text("Settings",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = if (darkModeEnabled) Color.White else Color.Black,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
@@ -216,13 +245,14 @@ fun HomeScreen(onNavigateToUserList: () -> Unit, onNavigateToOtherScreen: () -> 
 }
 
 @Composable
-fun UserListScreen(onNavigate: () -> Unit, userInputList: MutableList<String>) {
+fun UserListScreen(onNavigate: () -> Unit, userInputList: MutableList<String>, darkModeEnabled: Boolean) {
     val context = LocalContext.current
     var userInput by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (darkModeEnabled) Color.Black else Color.White)
             .padding(WindowInsets.systemBars.asPaddingValues())
             .padding(16.dp),
         verticalArrangement = Arrangement.Top
@@ -260,6 +290,8 @@ fun UserListScreen(onNavigate: () -> Unit, userInputList: MutableList<String>) {
             Text(
                 text = "My List",
                 style = MaterialTheme.typography.headlineLarge,
+                color = (if (darkModeEnabled) Color.White else Color.Black)
+
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -270,11 +302,13 @@ fun UserListScreen(onNavigate: () -> Unit, userInputList: MutableList<String>) {
                         Text (
                             text = "${index + 1}.",
                             style = MaterialTheme.typography.headlineMedium,
+                            color = (if (darkModeEnabled) Color.White else Color.Black),
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Text(
                             text = item,
                             style = MaterialTheme.typography.headlineSmall,
+                            color = (if (darkModeEnabled) Color.White else Color.Black),
                             modifier = Modifier
                                 .padding(top = 3.dp, end = 4.dp)
                                 .weight(1f)
@@ -289,6 +323,7 @@ fun UserListScreen(onNavigate: () -> Unit, userInputList: MutableList<String>) {
                             Icon(
                                 painter = painterResource(id = R.drawable.image_delete),
                                 contentDescription = "Delete",
+                                tint = if (darkModeEnabled) Color.White else Color.Black,
                                 modifier = Modifier.offset(y = (-6).dp)
                             )
                         }
@@ -310,10 +345,12 @@ fun UserListScreen(onNavigate: () -> Unit, userInputList: MutableList<String>) {
 }
 
 @Composable
-fun ContactScreen(onNavigateBack: () -> Unit, contacts: MutableList<Contacts>, onNavigateToAddContact: () -> Unit) {
+fun ContactScreen(onNavigateBack: () -> Unit, contacts: MutableList<Contacts>, onNavigateToAddContact: () -> Unit, darkModeEnabled: Boolean) {
+
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (darkModeEnabled) Color.Black else Color.White)
             .padding(WindowInsets.systemBars.asPaddingValues())
     ) {
 
@@ -330,6 +367,7 @@ fun ContactScreen(onNavigateBack: () -> Unit, contacts: MutableList<Contacts>, o
                 Text(
                     text = "Contacts",
                     style = MaterialTheme.typography.headlineLarge,
+                    color = (if (darkModeEnabled) Color.White else Color.Black),
                     modifier = Modifier
                         .padding(bottom = 20.dp, end = 16.dp)
                         .align(Alignment.TopEnd)
@@ -345,6 +383,7 @@ fun ContactScreen(onNavigateBack: () -> Unit, contacts: MutableList<Contacts>, o
                     Icon(
                         painter = painterResource(id = R.drawable.back_arrow),
                         contentDescription = "Back to Home Screen",
+                        tint = if (darkModeEnabled) Color.White else Color.Black,
                         modifier = Modifier
                             .size(200.dp)
                     )
@@ -357,7 +396,11 @@ fun ContactScreen(onNavigateBack: () -> Unit, contacts: MutableList<Contacts>, o
                     .padding(16.dp)
             ) {
                 items(contacts) { contact ->
-                    ContactCard(contact, onDelete = { contacts.remove(contact)})
+                    ContactCard(
+                        contacts = contact,
+                        onDelete = { contacts.remove(contact)},
+                        darkModeEnabled = darkModeEnabled
+                    )
                 }
             }
         }
@@ -370,7 +413,8 @@ fun ContactScreen(onNavigateBack: () -> Unit, contacts: MutableList<Contacts>, o
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = "Add Contact"
+                contentDescription = "Add Contact",
+                tint = if (darkModeEnabled) Color.Black else Color.White
             )
         }
     }
@@ -382,11 +426,13 @@ fun SettingsScreen(darkModeEnabled: Boolean, onDarkModeToggle: (Boolean) -> Unit
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (darkModeEnabled) Color.Black else Color.White)
             .padding(16.dp)
     ) {
         Text(
             text = "Settings",
             style = MaterialTheme.typography.headlineLarge,
+            color = if (darkModeEnabled) Color.White else Color.Black,
             modifier = Modifier
                 .padding(bottom = 16.dp)
                 .padding(WindowInsets.systemBars.asPaddingValues())
@@ -394,7 +440,7 @@ fun SettingsScreen(darkModeEnabled: Boolean, onDarkModeToggle: (Boolean) -> Unit
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Enable Dark Mode", modifier = Modifier.weight(1f))
+            Text("Enable Dark Mode", modifier = Modifier.weight(1f), color = if (darkModeEnabled) Color.White else Color.Black)
             Switch(
                 checked = darkModeEnabled,
                 onCheckedChange = onDarkModeToggle
@@ -405,7 +451,7 @@ fun SettingsScreen(darkModeEnabled: Boolean, onDarkModeToggle: (Boolean) -> Unit
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Enable Notifications", modifier = Modifier.weight(1f))
+            Text("Enable Notifications", modifier = Modifier.weight(1f), color = if (darkModeEnabled) Color.White else Color.Black)
             Switch(
                 checked = notificationsEnabled,
                 onCheckedChange = { notificationsEnabled = it }
@@ -413,14 +459,14 @@ fun SettingsScreen(darkModeEnabled: Boolean, onDarkModeToggle: (Boolean) -> Unit
         }
 
         Button(onClick = onNavigateBack, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp)) {
-            Text("Back to Home")
+            Text("Back to Home", color = if (darkModeEnabled) Color.Black else Color.White)
         }
     }
 }
 
 @SuppressLint("DefaultLocale")
 @Composable
-fun MoneyScreen(onNavigateBack: () -> Unit) {
+fun MoneyScreen(onNavigateBack: () -> Unit, darkModeEnabled: Boolean) {
     var balance by remember { mutableDoubleStateOf(0.0) }
     val transactions = remember { mutableStateListOf<Transaction>() }
     var amountInput by remember { mutableStateOf("") }
@@ -430,11 +476,13 @@ fun MoneyScreen(onNavigateBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (darkModeEnabled) Color.Black else Color.White)
             .padding(8.dp)
     ) {
         Text(
             text = "Total Balance: $${String.format("%.2f", balance)}",
             style = MaterialTheme.typography.headlineLarge,
+            color = if (darkModeEnabled) Color.White else Color.Black,
             modifier = Modifier
                 .padding(vertical = 8.dp)
                 .padding(WindowInsets.systemBars.asPaddingValues())
@@ -451,6 +499,7 @@ fun MoneyScreen(onNavigateBack: () -> Unit) {
             Text(
                 text = if (isExpense) "Expense" else "Income",
                 style = MaterialTheme.typography.headlineMedium,
+                color = if (darkModeEnabled) Color.White else Color.Black,
                 modifier = Modifier.weight(1f)
                     .padding(start = 16.dp)
             )
@@ -496,12 +545,13 @@ fun MoneyScreen(onNavigateBack: () -> Unit) {
             },
             modifier = Modifier.align(Alignment.End)
         ) {
-            Text("Input Transaction")
+            Text("Input Transaction", color = if (darkModeEnabled) Color.Black else Color.Black)
         }
 
         Text(
             text = "Transactions:",
             style = MaterialTheme.typography.headlineMedium,
+            color = if (darkModeEnabled) Color.White else Color.Black,
             modifier = Modifier.padding(vertical = 8.dp)
         )
 
@@ -517,6 +567,7 @@ fun MoneyScreen(onNavigateBack: () -> Unit) {
                     Text(
                         text = transaction.description,
                         modifier = Modifier.weight(1f),
+                        color = if (darkModeEnabled) Color.White else Color.Black,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
@@ -524,7 +575,8 @@ fun MoneyScreen(onNavigateBack: () -> Unit) {
                             "-$${String.format("%.2f", transaction.amount)}"
                         else
                             "$${String.format("%.2f", transaction.amount)}",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                                color = if (darkModeEnabled) Color.White else Color.Black
                     )
                 }
             }
@@ -538,13 +590,14 @@ fun MoneyScreen(onNavigateBack: () -> Unit) {
                 .padding(vertical = 8.dp)
                 .align(Alignment.CenterHorizontally)
         ) {
-            Text("Go back to Apps")
+            Text("Go back to Apps", color = if (darkModeEnabled) Color.Black else Color.Black)
         }
     }
 }
 
 @Composable
-fun AddContactScreen(onNavigateBack: () -> Unit, onAddContact: (Contacts) -> Unit) {
+fun AddContactScreen(onNavigateBack: () -> Unit, onAddContact: (Contacts) -> Unit, darkModeEnabled: Boolean) {
+
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
@@ -553,12 +606,14 @@ fun AddContactScreen(onNavigateBack: () -> Unit, onAddContact: (Contacts) -> Uni
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(if (darkModeEnabled) Color.Black else Color.White)
             .padding(16.dp),
         verticalArrangement = Arrangement.Top
     ) {
         Text(
             text = "Add New Contact",
             style = MaterialTheme.typography.headlineLarge,
+            color = if (darkModeEnabled) Color.White else Color.Black,
             modifier = Modifier
                 .padding(top = 10.dp, bottom = 2.dp)
                 .padding(WindowInsets.systemBars.asPaddingValues())
@@ -615,7 +670,7 @@ fun AddContactScreen(onNavigateBack: () -> Unit, onAddContact: (Contacts) -> Uni
             },
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            Text("Add Contact")
+            Text("Add Contact", color = if (darkModeEnabled) Color.Black else Color.White)
         }
 
         Button(
@@ -624,16 +679,21 @@ fun AddContactScreen(onNavigateBack: () -> Unit, onAddContact: (Contacts) -> Uni
                 .align(Alignment.CenterHorizontally)
                 .padding(top = 10.dp)
         ) {
-            Text("Cancel")
+            Text("Cancel", color = if (darkModeEnabled) Color.Black else Color.White
+            )
         }
     }
 }
 
 @Composable
-fun ContactCard(contacts: Contacts, onDelete: () -> Unit) {
+fun ContactCard(contacts: Contacts, onDelete: () -> Unit, darkModeEnabled: Boolean) {
+
+    val tintFilter = ColorFilter.tint(if (darkModeEnabled) Color.White else Color.Black)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .background(if (darkModeEnabled) Color.Black else Color.White)
             .padding(12.dp)
     ) {
         Row(
@@ -643,6 +703,7 @@ fun ContactCard(contacts: Contacts, onDelete: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.person_image),
                 contentDescription = "Photo of person",
+                colorFilter = tintFilter,
                 modifier = Modifier
                     .width(100.dp)
                     .height(100.dp)
@@ -653,13 +714,15 @@ fun ContactCard(contacts: Contacts, onDelete: () -> Unit) {
             ) {
                 Text(
                     text = "${contacts.firstName} ${contacts.lastName}",
+                    color = if (darkModeEnabled) Color.White else Color.Black,
                     modifier = Modifier
                         .padding(top = 16.dp)
                 )
-                Text(text = "Age: ${contacts.age}")
+                Text(text = "Age: ${contacts.age}", color = if (darkModeEnabled) Color.White else Color.Black)
 
                 Text(
                     text = "Phone Number: ${contacts.phoneNumber}",
+                    color = if (darkModeEnabled) Color.White else Color.Black,
                     modifier = Modifier
                         .padding(bottom = 16.dp)
                 )
@@ -668,6 +731,7 @@ fun ContactCard(contacts: Contacts, onDelete: () -> Unit) {
             IconButton(onClick = onDelete) {
                 Icon(
                     painter = painterResource(id = R.drawable.image_delete),
+                    tint = if (darkModeEnabled) Color.White else Color.Black,
                     contentDescription = "Delete Contact"
                 )
             }
@@ -675,17 +739,4 @@ fun ContactCard(contacts: Contacts, onDelete: () -> Unit) {
     }
 }
 
-@Composable
-fun PracticeTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val colorScheme = if (darkTheme) {
-        darkColorScheme()
-    } else {
-        lightColorScheme()
-    }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = MaterialTheme.typography,
-        content = content
-    )
-}
