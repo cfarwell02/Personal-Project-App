@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(people: List<Contacts>) {
     // State variable to track the current screen
     val currentScreen = remember { mutableStateOf("home") }
-    val usecfarwell02/GitHub-Android-ApprInputList = remember { mutableStateListOf<String>() }
+    val userInputList = remember { mutableStateListOf<String>() }
     val contacts = remember { mutableStateListOf(*people.toTypedArray()) }
     var darkModeEnabled by remember { mutableStateOf(false) }
 
